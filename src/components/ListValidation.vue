@@ -7,10 +7,14 @@
           v-for="(item, index) in list1"
           :key="'list1-' + index"
           :ref="'list1-' + index"
-          class="list-item"
-          :class="{ active: activeElement === `list1-${index}` }"
-          @mousedown="startConnection(index, 'list1')"
-          @mouseup="clearActiveElement"
+          class="list-item noselect"
+          :class="{
+            active: activeElement === `list1-${index}`,
+            correct: validationResults[index] === 'correct',
+            incorrect: validationResults[index] === 'incorrect',
+          }"
+          @mousedown="!validated && startConnection(index, 'list1')"
+          @mouseup="!validated && clearActiveElement"
         >
           {{ item }}
         </li>
@@ -79,19 +83,36 @@
           :key="'list2-' + index"
           :ref="'list2-' + index"
           class="list-item"
-          :class="{ active: activeElement === `list2-${index}` }"
-          @mouseup="endConnection(index, 'list2')"
-          @mousedown="clearActiveElement"
+          :class="{
+            active: activeElement === `list2-${index}`,
+            correct: validated && correctConnections.includes(index),
+            incorrect: validated && !correctConnections.includes(index),
+          }"
+          @mouseup="!validated && endConnection(index, 'list2')"
+          @mousedown="!validated && clearActiveElement"
         >
           {{ item }}
         </li>
       </ul>
     </div>
   </div>
+  <!-- Botón de Validar Resultados -->
+  <button @click="validateResults" :disabled="validated" class="validate-button">
+    Validar Resultados
+  </button>
 </template>
 
 <script>
+import { inject } from 'vue';
+
 export default {
+  setup() {
+    const updateParent = inject('errorReported');
+    const sendValueToParent = (value) => {
+      updateParent(value);
+    };
+    return { sendValueToParent };
+  },
   data() {
     return {
       list1: ["Elemento A", "Elemento B", "Elemento C"],
@@ -99,6 +120,10 @@ export default {
       connections: [], // Conexiones finales
       tempConnection: null, // Conexión temporal mientras se dibuja
       activeElement: null, // Elemento activo para sombrear
+      validated: false, // Estado de validación
+      validationResults: [], // Resultados de validación (correct/incorrect)
+      correctConnections: [], // Índices correctos de lista 2
+      correctAnswers: [0, 1, 2], // Respuestas correctas: índice de la lista 2 que corresponde a cada elemento de la lista 1
     };
   },
   methods: {
@@ -154,6 +179,28 @@ export default {
     clearActiveElement() {
       this.activeElement = null;
     },
+    validateResults() {
+      this.validated = true;
+
+      this.validationResults = this.connections.map((conn) =>
+        this.correctAnswers[conn.from.index] === conn.to.index
+          ? "correct"
+          : "incorrect"
+      );
+
+      // Obtener índices correctos en lista 2
+      this.correctConnections = this.connections
+      .filter(
+        (conn) => this.correctAnswers[conn.from.index] === conn.to.index
+      )
+      .map((conn) => conn.to.index);
+
+      const result = this.validationResults.some((conn) => conn == 'incorrect')
+      if (result) {
+        this.$emit('error');
+        this.sendValueToParent('error');
+      }
+    },
     updateTempConnection(event) {
       if (this.tempConnection) {
         const containerRect = this.$refs.container.getBoundingClientRect();
@@ -197,6 +244,8 @@ export default {
   padding: 0;
   margin: 0;
   width: 20rem;
+  position: relative;
+  z-index: 1; /* Aseguramos que los divs estén por debajo del SVG */
 }
 .list-2 {
   position: absolute;
@@ -214,6 +263,27 @@ export default {
   background-color: #f0f8ff; /* Sombreado para el elemento activo */
   border-color: #007acc;
 }
+.list-item.correct {
+  border-color: green;
+  color: green;
+}
+.list-item.incorrect {
+  border-color: red;
+  color: red;
+}
+.validate-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.validate-button:disabled {
+  background-color: gray;
+  cursor: not-allowed;
+}
 .connection-svg {
   position: absolute;
   top: 0;
@@ -221,5 +291,15 @@ export default {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 2; /* Hacemos que las flechas estén encima de los divs */
+}
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
 }
 </style>

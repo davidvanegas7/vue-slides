@@ -1,7 +1,15 @@
 <template>
   <div class="screen">
-    <span v-for="(slide, index) in slides" :key="index" ref="slides">
-      <component class="slide" v-if="currentSlide == index" :is="{ template: `${slide}` }" />
+    <span
+      v-for="(slide, index) in slides"
+      :key="index"
+      ref="slides"
+      v-show="currentSlide === index"
+    >
+      <component
+        :ref="'slide-' + index"
+        :is="{ template: `${slide}` }"
+      />
     </span>
     <div class="buttons">
       <button @click="prevSlide" :disabled="currentSlide === 0">Anterior</button>
@@ -14,13 +22,20 @@
 import HelloWorld from './components/HelloWorld.vue';
 import ListValidation from './components/ListValidation.vue';
 import { createApp } from 'vue/dist/vue.esm-bundler.js';
+import { provide, getCurrentInstance } from 'vue';
 
 export default {
   data() {
     return {
       slides: [],
       currentSlide: 0,
+      reviewSlides: [], // Lista de diapositivas para repasar
     };
+  },
+  computed: {
+    isLastSlide() {
+      return this.currentSlide === this.slides.length - 1;
+    },
   },
   async created() {
     const response = await fetch('/src/slides.html?v=' + Date.now());
@@ -33,10 +48,31 @@ export default {
       if (this.currentSlide > 0) this.currentSlide--;
     },
     nextSlide() {
+      console.log("nextSlide", this.reviewSlides)
       if (this.currentSlide < this.slides.length - 1) this.currentSlide++;
+      this.checkReforceSlides()
+    },
+    checkReforceSlides() {
+      if (this.isLastSlide && this.reviewSlides.length > 0) {
+        this.slides.push(...this.reviewSlides);
+        this.reviewSlides = []; // Limpia la lista de repaso
+      }
+    },
+    markForReview(slideIndex) {
+      const slideToReview = this.slides[slideIndex];
+      if (!this.reviewSlides.includes(slideToReview)) {
+        this.reviewSlides.push(slideToReview);
+        console.log(this.reviewSlides)
+      }
     },
   },
+  setup() {
+    const instance = getCurrentInstance();
 
+    provide("errorReported", (value) => {
+      instance.proxy.markForReview(instance.proxy.currentSlide);
+    });
+  },
 };
 </script>
 <style>
