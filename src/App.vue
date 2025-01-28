@@ -21,6 +21,8 @@
 <script>
 import HelloWorld from './components/HelloWorld.vue';
 import ListValidation from './components/ListValidation.vue';
+import WordListComponent from './components/WordListComponent.vue';
+import InteractiveQuestion from './components/InteractiveQuestion.vue';
 import { createApp } from 'vue/dist/vue.esm-bundler.js';
 import { provide, getCurrentInstance } from 'vue';
 
@@ -48,7 +50,6 @@ export default {
       if (this.currentSlide > 0) this.currentSlide--;
     },
     nextSlide() {
-      console.log("nextSlide", this.reviewSlides)
       if (this.currentSlide < this.slides.length - 1) this.currentSlide++;
       this.checkReforceSlides()
     },

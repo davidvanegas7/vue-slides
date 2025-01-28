@@ -260,7 +260,6 @@ export default {
   transition: background-color 0.3s;
 }
 .list-item.active {
-  background-color: #f0f8ff; /* Sombreado para el elemento activo */
   border-color: #007acc;
 }
 .list-item.correct {
